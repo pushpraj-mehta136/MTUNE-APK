@@ -1,15 +1,17 @@
-// frontend/app.js
-document.addEventListener('DOMContentLoaded', async () => {
-    const filesList = document.getElementById('files-list');
+document.addEventListener("DOMContentLoaded", async () => {
+    const filesList = document.getElementById("files-list");
 
     const createFileCard = (file) => {
-        const card = document.createElement('div');
-        card.className = 'file-card';
+        const card = document.createElement("div");
+        card.className = "file-card";
+
         card.innerHTML = `
             <h3>${file.title}</h3>
             <p>${file.description}</p>
-            <a href="/uploads/${file.filename}" target="_blank" download>⬇️ Download</a>
+            <p><strong>Original Filename:</strong> ${file.originalName}</p>
+            <a href="/uploads/${file.filename}" download>⬇️ Download</a>
         `;
+
         return card;
     };
 
@@ -17,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         filesList.innerHTML = "<p>🔄 Loading files...</p>";
 
         const response = await fetch('/files');
-        if (!response.ok) throw new Error("Failed to load files.");
+        if (!response.ok) throw new Error("Failed to load files");
 
         const files = await response.json();
         filesList.innerHTML = '';
@@ -28,7 +30,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         files.forEach(file => {
-            filesList.appendChild(createFileCard(file));
+            const card = createFileCard(file);
+            filesList.appendChild(card);
         });
     } catch (error) {
         filesList.innerHTML = `<p>❌ Error: ${error.message}</p>`;

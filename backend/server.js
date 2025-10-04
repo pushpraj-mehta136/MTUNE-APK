@@ -13,18 +13,22 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 app.use(express.static("frontend"));
 app.use("/uploads", express.static(uploadsDir));
 
-// parse JSON bodies (for PUT)
 app.use(express.json());
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+    filename: (req, file, cb) => {
+        // Generate a unique filename using timestamp + original filename
+        const uniqueName = Date.now() + "-" + file.originalname;
+        cb(null, uniqueName);
+    },
 });
+
 const upload = multer({ storage });
 
 let fileMetadata = [];
 
-// Middleware
+// Middleware to check for admin authentication
 function isAuthenticated(req, res, next) {
     const password = req.headers["admin-password"];
     if (password === ADMIN_PASSWORD) return next();
@@ -39,23 +43,29 @@ app.post("/upload", isAuthenticated, upload.single("file"), (req, res) => {
     const meta = {
         title,
         description,
-        filename: req.file.filename
+        filename: req.file.filename, // Store the unique filename
+        originalName: req.file.originalname // Store the original filename
     };
     fileMetadata.push(meta);
     res.json(meta);
 });
 
-// Public: get files
+// Public route to get the list of files
 app.get("/files", (req, res) => {
-    res.json(fileMetadata);
+    res.json(fileMetadata.map(({ title, description, originalName, filename }) => ({
+        title,
+        description,
+        originalName,
+        filename
+    })));
 });
 
-// Admin: get all files (could include extra metadata if needed)
+// Admin route to get all files with metadata
 app.get("/admin/files", isAuthenticated, (req, res) => {
     res.json(fileMetadata);
 });
 
-// Admin: update title / description
+// Admin route to update title/description of a file
 app.put("/admin/files/:filename", isAuthenticated, (req, res) => {
     const fname = req.params.filename;
     const { title, description } = req.body;
@@ -71,7 +81,7 @@ app.put("/admin/files/:filename", isAuthenticated, (req, res) => {
     res.json(file);
 });
 
-// Admin: delete file & metadata
+// Admin route to delete a file and metadata
 app.delete("/admin/files/:filename", isAuthenticated, (req, res) => {
     const fname = req.params.filename;
 
@@ -88,10 +98,29 @@ app.delete("/admin/files/:filename", isAuthenticated, (req, res) => {
     fs.unlink(filePath, (err) => {
         if (err) {
             console.error("Error deleting file:", err);
-            // But still respond success in metadata side
             return res.status(500).send("Error deleting file");
         }
         res.json({ message: "Deleted", filename: removed.filename });
+    });
+});
+
+// Endpoint to download a file with its original name
+app.get("/uploads/:filename", (req, res) => {
+    const filename = req.params.filename;
+
+    const file = fileMetadata.find(f => f.filename === filename);
+    if (!file) {
+        return res.status(404).send("File not found");
+    }
+
+    const filePath = path.join(uploadsDir, filename);
+    const originalName = file.originalName;
+
+    res.download(filePath, originalName, (err) => {
+        if (err) {
+            console.error("Error downloading file:", err);
+            res.status(500).send("Error downloading file");
+        }
     });
 });
 

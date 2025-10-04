@@ -7,36 +7,33 @@ document.addEventListener("DOMContentLoaded", () => {
     async function askPassword() {
         const pw = prompt("🔐 Enter admin password:");
         if (!pw) {
-            alert("Password required");
+            alert("Password is required");
             throw new Error("No password entered");
         }
-        // store for future requests
         ADMIN_HEADERS["Admin-Password"] = pw;
         return pw;
     }
 
     async function fetchAdminFiles() {
         try {
-            if (!ADMIN_HEADERS["Admin-Password"]) {
-                await askPassword();
-            }
+            if (!ADMIN_HEADERS["Admin-Password"]) await askPassword();
+
             const res = await fetch("/admin/files", {
                 headers: ADMIN_HEADERS
             });
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || "Failed to fetch files");
-            }
+
+            if (!res.ok) throw new Error(await res.text());
             const files = await res.json();
             renderAdminFiles(files);
         } catch (err) {
-            console.error("Error fetching admin files:", err);
+            console.error("Fetch error:", err);
             adminFilesList.innerHTML = `<p>❌ ${err.message}</p>`;
         }
     }
 
     function renderAdminFiles(files) {
         adminFilesList.innerHTML = "";
+
         if (files.length === 0) {
             adminFilesList.innerHTML = "<p>No files uploaded yet.</p>";
             return;
@@ -44,61 +41,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
         files.forEach(file => {
             const card = document.createElement("div");
-            card.className = "file-card";  // reuse same card style or adjust CSS
+            card.className = "file-card";
             card.innerHTML = `
                 <h3>${file.title}</h3>
                 <p>${file.description}</p>
-                <a href="/uploads/${file.filename}" target="_blank" download>Download</a>
+                <p><strong>Original Filename:</strong> ${file.originalName}</p>
+                <a href="/uploads/${file.filename}" download>⬇️ Download</a>
                 <div class="admin-controls">
-                    <button class="edit-btn" data-filename="${file.filename}">Edit</button>
-                    <button class="delete-btn" data-filename="${file.filename}">Delete</button>
+                    <button class="edit-btn" data-filename="${file.filename}">✏️ Edit</button>
+                    <button class="delete-btn" data-filename="${file.filename}">🗑️ Delete</button>
                 </div>
             `;
             adminFilesList.appendChild(card);
         });
 
-        // attach event handlers
-        adminFilesList.querySelectorAll(".edit-btn").forEach(btn => {
+        attachAdminActions();
+    }
+
+    function attachAdminActions() {
+        document.querySelectorAll(".edit-btn").forEach(btn => {
             btn.addEventListener("click", () => {
-                const fname = btn.dataset.filename;
-                showEditForm(fname);
+                const filename = btn.dataset.filename;
+                showEditForm(filename);
             });
         });
-        adminFilesList.querySelectorAll(".delete-btn").forEach(btn => {
+
+        document.querySelectorAll(".delete-btn").forEach(btn => {
             btn.addEventListener("click", () => {
-                const fname = btn.dataset.filename;
-                doDeleteFile(fname);
+                const filename = btn.dataset.filename;
+                doDeleteFile(filename);
             });
         });
     }
 
     async function showEditForm(filename) {
-        // find the card DOM element
-        const btn = document.querySelector(`.edit-btn[data-filename="${filename}"]`);
-        const card = btn.closest(".file-card");
+        const card = document.querySelector(`.edit-btn[data-filename="${filename}"]`).closest(".file-card");
+        const title = card.querySelector("h3").textContent;
+        const desc = card.querySelector("p").textContent;
 
-        // get current values
-        const titleElem = card.querySelector("h3");
-        const descElem = card.querySelector("p");
-
-        const currentTitle = titleElem.textContent;
-        const currentDesc = descElem.textContent;
-
-        // replace card content with edit form
         card.innerHTML = `
-            <input type="text" class="edit-title" value="${currentTitle}" />
-            <input type="text" class="edit-desc" value="${currentDesc}" />
-            <button class="save-edit-btn">Save</button>
-            <button class="cancel-edit-btn">Cancel</button>
+            <input type="text" class="edit-title" value="${title}" />
+            <input type="text" class="edit-desc" value="${desc}" />
+            <button class="save-edit-btn">💾 Save</button>
+            <button class="cancel-edit-btn">❌ Cancel</button>
         `;
 
-        card.querySelector(".cancel-edit-btn").addEventListener("click", () => {
-            fetchAdminFiles();  // re-render
-        });
+        card.querySelector(".cancel-edit-btn").addEventListener("click", fetchAdminFiles);
 
         card.querySelector(".save-edit-btn").addEventListener("click", async () => {
-            const newTitle = card.querySelector(".edit-title").value;
-            const newDesc = card.querySelector(".edit-desc").value;
+            const newTitle = card.querySelector(".edit-title").value.trim();
+            const newDesc = card.querySelector(".edit-desc").value.trim();
 
             try {
                 const res = await fetch(`/admin/files/${filename}`, {
@@ -107,22 +99,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         "Content-Type": "application/json",
                         ...ADMIN_HEADERS
                     },
-                    body: JSON.stringify({
-                        title: newTitle,
-                        description: newDesc
-                    })
+                    body: JSON.stringify({ title: newTitle, description: newDesc })
                 });
 
-                if (!res.ok) {
-                    const txt = await res.text();
-                    throw new Error(txt || "Edit failed");
-                }
-
-                alert("✅ Edited successfully");
+                if (!res.ok) throw new Error(await res.text());
+                alert("✅ File updated");
                 fetchAdminFiles();
             } catch (err) {
-                alert(`❌ Error editing: ${err.message}`);
-                console.error("Edit error:", err);
+                alert(`❌ Failed to update: ${err.message}`);
             }
         });
     }
@@ -136,28 +120,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: ADMIN_HEADERS
             });
 
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || "Delete failed");
-            }
+            if (!res.ok) throw new Error(await res.text());
 
-            alert("✅ Deleted successfully");
+            alert("✅ File deleted");
             fetchAdminFiles();
         } catch (err) {
-            alert(`❌ Error deleting: ${err.message}`);
-            console.error("Delete error:", err);
+            alert(`❌ Delete failed: ${err.message}`);
         }
     }
 
     uploadForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         const formData = new FormData(uploadForm);
 
         try {
-            if (!ADMIN_HEADERS["Admin-Password"]) {
-                await askPassword();
-            }
+            if (!ADMIN_HEADERS["Admin-Password"]) await askPassword();
 
             const res = await fetch("/upload", {
                 method: "POST",
@@ -165,10 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: formData
             });
 
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || "Upload failed");
-            }
+            if (!res.ok) throw new Error(await res.text());
 
             const result = await res.json();
             alert(`✅ Uploaded: ${result.title}`);
@@ -176,10 +150,9 @@ document.addEventListener("DOMContentLoaded", () => {
             fetchAdminFiles();
         } catch (err) {
             alert(`❌ Upload failed: ${err.message}`);
-            console.error("Upload error:", err);
         }
     });
 
-    // Initially load admin files
+    // Initial load
     fetchAdminFiles();
 });
