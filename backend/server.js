@@ -10,6 +10,31 @@ const ADMIN_PASSWORD = "Pushpraj@##@2123";
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
+const filesJsonPath = path.join(__dirname, "files.json");
+
+// Middleware to check for admin authentication
+function isAuthenticated(req, res, next) {
+    const password = req.headers["admin-password"];
+    if (password === ADMIN_PASSWORD) return next();
+    return res.status(401).send("Unauthorized");
+}
+
+// Load file metadata from files.json on startup
+let fileMetadata = [];
+function loadFileMetadata() {
+    if (fs.existsSync(filesJsonPath)) {
+        const data = fs.readFileSync(filesJsonPath);
+        fileMetadata = JSON.parse(data);
+    }
+}
+
+// Save file metadata to files.json
+function saveFileMetadata() {
+    fs.writeFileSync(filesJsonPath, JSON.stringify(fileMetadata, null, 2));
+}
+
+loadFileMetadata(); // Load metadata on server start
+
 app.use(express.static("frontend"));
 app.use("/uploads", express.static(uploadsDir));
 
@@ -18,22 +43,12 @@ app.use(express.json());
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
-        // Generate a unique filename using timestamp + original filename
         const uniqueName = Date.now() + "-" + file.originalname;
         cb(null, uniqueName);
     },
 });
 
 const upload = multer({ storage });
-
-let fileMetadata = [];
-
-// Middleware to check for admin authentication
-function isAuthenticated(req, res, next) {
-    const password = req.headers["admin-password"];
-    if (password === ADMIN_PASSWORD) return next();
-    return res.status(401).send("Unauthorized");
-}
 
 // Upload new file
 app.post("/upload", isAuthenticated, upload.single("file"), (req, res) => {
@@ -43,10 +58,11 @@ app.post("/upload", isAuthenticated, upload.single("file"), (req, res) => {
     const meta = {
         title,
         description,
-        filename: req.file.filename, // Store the unique filename
-        originalName: req.file.originalname // Store the original filename
+        filename: req.file.filename,
+        originalName: req.file.originalname,
     };
     fileMetadata.push(meta);
+    saveFileMetadata(); // Save to files.json
     res.json(meta);
 });
 
@@ -78,6 +94,7 @@ app.put("/admin/files/:filename", isAuthenticated, (req, res) => {
     if (title !== undefined) file.title = title;
     if (description !== undefined) file.description = description;
 
+    saveFileMetadata(); // Save changes to files.json
     res.json(file);
 });
 
@@ -90,10 +107,9 @@ app.delete("/admin/files/:filename", isAuthenticated, (req, res) => {
         return res.status(404).send("File not found");
     }
 
-    // Remove from metadata list
-    const [ removed ] = fileMetadata.splice(idx, 1);
+    const [removed] = fileMetadata.splice(idx, 1);
+    saveFileMetadata(); // Save changes to files.json
 
-    // Delete physical file
     const filePath = path.join(uploadsDir, removed.filename);
     fs.unlink(filePath, (err) => {
         if (err) {
