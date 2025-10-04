@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MTUNE APK - Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>🛠️ Admin Panel</h1>
+
+    <section class="upload-section">
+      <h2>Upload New File</h2>
+      <form id="uploadForm" enctype="multipart/form-data">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" required />
+
+        <label for="description">Description</label>
+        <input type="text" id="description" name="description" required />
+
+        <label for="file">Choose APK File</label>
+        <input type="file" id="file" name="file" accept=".apk" required />
+
+        <button type="submit">⬆️ Upload</button>
+      </form>
+    </section>
+
+    <section class="manage-section">
+      <h2>Manage Files</h2>
+      <div id="admin-files-list">
+        <!-- Admin file items go here -->
+      </div>
+    </section>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
