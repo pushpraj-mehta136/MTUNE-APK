@@ -35,8 +35,10 @@ function saveFileMetadata() {
 
 loadFileMetadata(); // Load metadata on server start
 
-app.use(express.static("frontend"));
-app.use("/uploads", express.static(uploadsDir));
+// Serve static files from the frontend directory
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
+// Serve uploaded files
+app.use("/uploads", express.static(uploadsDir)); 
 
 app.use(express.json());
 
@@ -60,6 +62,7 @@ app.post("/upload", isAuthenticated, upload.single("file"), (req, res) => {
         description,
         filename: req.file.filename,
         originalName: req.file.originalname,
+        uploadedAt: new Date().toISOString(), // Add timestamp
     };
     fileMetadata.push(meta);
     saveFileMetadata(); // Save to files.json
@@ -79,6 +82,11 @@ app.get("/files", (req, res) => {
 // Admin route to get all files with metadata
 app.get("/admin/files", isAuthenticated, (req, res) => {
     res.json(fileMetadata);
+});
+
+// Route for /admin to serve admin.html
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'frontend', 'admin.html'));
 });
 
 // Admin route to update title/description of a file

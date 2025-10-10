@@ -9,14 +9,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             <h3>${file.title}</h3>
             <p>${file.description}</p>
             <p><strong>Original Filename:</strong> ${file.originalName}</p>
-            <a href="/uploads/${file.filename}" download>⬇️ Download</a>
+            <a href="/uploads/${file.filename}" download><i class="fas fa-download"></i> Download</a>
         `;
 
         return card;
     };
 
     try {
-        filesList.innerHTML = "<p>🔄 Loading files...</p>";
+        filesList.innerHTML = `<p><i class="fas fa-spinner fa-spin"></i> Loading files...</p>`;
 
         const response = await fetch('/files');
         if (!response.ok) throw new Error("Failed to load files");
@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         filesList.innerHTML = '';
 
         if (files.length === 0) {
-            filesList.innerHTML = "<p>🚫 No files available yet.</p>";
+            filesList.innerHTML = `<p><i class="fas fa-box-open"></i> No files available yet.</p>`;
             return;
         }
 
@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             filesList.appendChild(card);
         });
     } catch (error) {
-        filesList.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+        filesList.innerHTML = `<p><i class="fas fa-exclamation-triangle"></i> Error: ${error.message}</p>`;
         console.error("File fetch error:", error);
     }
 });

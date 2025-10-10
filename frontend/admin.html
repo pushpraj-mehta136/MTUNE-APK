@@ -4,12 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MTUNE APK - Admin Panel</title>
+  <link rel="icon" href="/assets/logo.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>🛠️ Admin Panel</h1>
+    <h1><i class="fas fa-tools"></i> MTUNE Admin Panel</h1>
 
     <section class="upload-section">
       <h2>Upload New File</h2>
@@ -23,7 +26,7 @@
         <label for="file">Choose APK File</label>
         <input type="file" id="file" name="file" accept=".apk" required />
 
-        <button type="submit">⬆️ Upload</button>
+        <button type="submit"><i class="fas fa-upload"></i> Upload</button>
       </form>
     </section>
 
@@ -36,5 +39,16 @@
   </div>
 
   <script src="admin.js"></script>
+
+  <!-- Modal Structure -->
+  <div id="modal-container" class="modal-container hidden">
+    <div class="modal-box">
+      <h3 id="modal-title">Modal Title</h3>
+      <p id="modal-message">Modal message goes here.</p>
+      <div id="modal-input-container"></div>
+      <div id="modal-buttons" class="modal-buttons"></div>
+    </div>
+  </div>
+
 </body>
 </html>
